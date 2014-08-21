@@ -1,12 +1,16 @@
-Data Migrate
-====
+Data Migrate End
+================
 
-Run data migrations alongside schema migrations.
+Run data migrations after schema migrations.
 
-Data migrations are stored in db/data. They act like schema
+Data migrations are stored in db/data_end. They act like schema
 migrations, except they should be reserved for data migrations. For
 instance, if you realize you need to titleize all your titles, this
 is the place to do it.
+
+Based on, and forked from, https://github.com/ajvargo/data-migrate.
+
+Todo: revise the rest of the readme.
 
 Why should I use this?
 ----------------------

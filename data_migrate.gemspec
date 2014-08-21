@@ -3,16 +3,16 @@ $:.push File.expand_path("../lib", __FILE__)
 require "data_migrate/version"
 
 Gem::Specification.new do |s|
-  s.name        = "data_migrate"
+  s.name        = "data_migrate_end"
   s.version     = DataMigrate::VERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["Andrew J Vargo"]
-  s.email       = ["ajvargo@computer.org"]
-  s.homepage    = "http://ajvargo.com"
-  s.summary     = %q{Rake tasks to migrate data alongside schema changes.}
-  s.description = %q{Rake tasks to migrate data alongside schema changes.}
+  s.authors     = ["Andrew J Vargo", "Oleg Pudeyev"]
+  s.email       = ["oleg@bsdpower.com"]
+  s.homepage    = "http://bsdpower.com"
+  s.summary     = %q{Rake tasks to migrate data after schema changes.}
+  s.description = %q{Rake tasks to migrate data after schema changes.}
 
-  s.rubyforge_project = "data_migrate"
+  s.rubyforge_project = "data_migrate_end"
 
   s.add_dependency('rails', '>= 3.1.0')
 
