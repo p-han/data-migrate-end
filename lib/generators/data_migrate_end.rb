@@ -1,5 +1,5 @@
 require 'rails/generators/named_base'
-module DataMigrate
+module DataMigrateEnd
   module Generators
     class DataMigrationGenerator < Rails::Generators::NamedBase #:nodoc:
       def self.source_root

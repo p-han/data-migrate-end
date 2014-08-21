@@ -1,3 +1,3 @@
-module DataMigrate
+module DataMigrateEnd
   VERSION = "0.0.1"
 end

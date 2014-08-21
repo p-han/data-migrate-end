@@ -1,10 +1,10 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
-require "data_migrate/version"
+require "data_migrate_end/version"
 
 Gem::Specification.new do |s|
   s.name        = "data_migrate_end"
-  s.version     = DataMigrate::VERSION
+  s.version     = DataMigrateEnd::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Andrew J Vargo", "Oleg Pudeyev"]
   s.email       = ["oleg@bsdpower.com"]
