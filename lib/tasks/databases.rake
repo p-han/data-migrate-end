@@ -1,7 +1,9 @@
+require 'data_migrate_end/data_end_migrator'
+
 namespace :db do
   namespace :migrate do
-    desc "Migrate the database data and schema (options: VERSION=x, VERBOSE=false)."
-    task :with_data => :environment do
+    desc "Perform data end migrations (options: VERSION=x, VERBOSE=false)."
+    task :data_end => :environment do
       assure_data_schema_table
 
       ActiveRecord::Migration.verbose = ENV["VERBOSE"] ? ENV["VERBOSE"] == "true" : true
@@ -46,7 +48,7 @@ namespace :db do
       migrations.each do |migration|
         if migration[:kind] == :data
           ActiveRecord::Migration.write("== %s %s" % ['Data', "=" * 71])
-          DataMigrate::DataMigrator.run(migration[:direction], "db/data/", migration[:version])
+          DataMigrateEnd::DataEndMigrator.run(migration[:direction], "db/data_end/", migration[:version])
         else
           ActiveRecord::Migration.write("== %s %s" % ['Schema', "=" * 69])
           ActiveRecord::Migrator.run(migration[:direction], "db/migrate/", migration[:version])
@@ -57,26 +59,25 @@ namespace :db do
     end
 
     namespace :redo do
-      desc 'Rollbacks the database one migration and re migrate up (options: STEP=x, VERSION=x).'
-      task :with_data => :environment do
+      desc 'Rollbacks the database one data end migration and re migrate up (options: STEP=x, VERSION=x).'
+      task :data_end => :environment do
       assure_data_schema_table
         if ENV["VERSION"]
-          Rake::Task["db:migrate:down:with_data"].invoke
-          Rake::Task["db:migrate:up:with_data"].invoke
+          Rake::Task["db:migrate:down:data_end"].invoke
+          Rake::Task["db:migrate:up:data_end"].invoke
         else
-          Rake::Task["db:rollback:with_data"].invoke
-          Rake::Task["db:migrate:with_data"].invoke
+          Rake::Task["db:rollback:data_end"].invoke
+          Rake::Task["db:migrate:data_end"].invoke
         end
       end
     end
 
     namespace :up do
       desc 'Runs the "up" for a given migration VERSION. (options both=false)'
-      task :with_data => :environment do
+      task :data_end => :environment do
         version = ENV["VERSION"] ? ENV["VERSION"].to_i : nil
         raise "VERSION is required" unless version
         assure_data_schema_table
-        run_both = ENV["BOTH"] == "true"
         migrations = pending_migrations.keep_if{|m| m[:version] == version}
 
         unless run_both || migrations.size < 2
@@ -86,7 +87,7 @@ namespace :db do
         migrations.each do |migration|
           if migration[:kind] == :data
             ActiveRecord::Migration.write("== %s %s" % ['Data', "=" * 71])
-            DataMigrate::DataMigrator.run(:up, "db/data/", migration[:version])
+            DataMigrateEnd::DataEndMigrator.run(:up, "db/data_end/", migration[:version])
           else
             ActiveRecord::Migration.write("== %s %s" % ['Schema', "=" * 69])
             ActiveRecord::Migrator.run(:up, "db/migrate/", migration[:version])
@@ -97,7 +98,7 @@ namespace :db do
 
     namespace :down do
       desc 'Runs the "down" for a given migration VERSION. (option BOTH=false)'
-      task :with_data => :environment do
+      task :data_end => :environment do
         version = ENV["VERSION"] ? ENV["VERSION"].to_i : nil
         raise "VERSION is required" unless version
         assure_data_schema_table
@@ -111,7 +112,7 @@ namespace :db do
         migrations.each do |migration|
           if migration[:kind] == :data
             ActiveRecord::Migration.write("== %s %s" % ['Data', "=" * 71])
-            DataMigrate::DataMigrator.run(:down, "db/data/", migration[:version])
+            DataMigrateEnd::DataEndMigrator.run(:down, "db/data_end/", migration[:version])
           else
             ActiveRecord::Migration.write("== %s %s" % ['Schema', "=" * 69])
             ActiveRecord::Migrator.run(:down, "db/migrate/", migration[:version])
@@ -122,15 +123,15 @@ namespace :db do
 
     namespace :status do
       desc "Display status of data and schema migrations"
-      task :with_data => :environment do
+      task :data_end => :environment do
         config = connect_to_database
         next unless config
 
-        db_list_data = ActiveRecord::Base.connection.select_values("SELECT version FROM #{DataMigrate::DataMigrator.schema_migrations_table_name}")
+        db_list_data = ActiveRecord::Base.connection.select_values("SELECT version FROM #{DataMigrateEnd::DataEndMigrator.schema_migrations_table_name}")
         db_list_schema = ActiveRecord::Base.connection.select_values("SELECT version FROM #{ActiveRecord::Migrator.schema_migrations_table_name}")
         file_list = []
 
-        Dir.foreach(File.join(Rails.root, 'db', 'data')) do |file|
+        Dir.foreach(File.join(Rails.root, 'db', 'data_end')) do |file|
           # only files matching "20091231235959_some_name.rb" pattern
           if match_data = /(\d{14})_(.+)\.rb/.match(file)
             status = db_list_data.delete(match_data[1]) ? 'up' : 'down'
@@ -174,7 +175,7 @@ namespace :db do
       past_migrations[0..(step - 1)].each do | past_migration |
         if past_migration[:kind] == :data
           ActiveRecord::Migration.write("== %s %s" % ['Data', "=" * 71])
-          DataMigrate::DataMigrator.run(:down, "db/data/", past_migration[:version])
+          DataMigrateEnd::DataEndMigrator.run(:down, "db/data_end/", past_migration[:version])
         elsif past_migration[:kind] == :schema
           ActiveRecord::Migration.write("== %s %s" % ['Schema', "=" * 69])
           ActiveRecord::Migrator.run(:down, "db/migrate/", past_migration[:version])
@@ -189,12 +190,12 @@ namespace :db do
       assure_data_schema_table
       # TODO: No worky for .forward
       step = ENV['STEP'] ? ENV['STEP'].to_i : 1
-      # DataMigrate::DataMigrator.forward('db/data/', step)
+      # DataMigrateEnd::DataEndMigrator.forward('db/data_end/', step)
       migrations = pending_migrations.reverse.pop(step).reverse
       migrations.each do | pending_migration |
         if pending_migration[:kind] == :data
           ActiveRecord::Migration.write("== %s %s" % ['Data', "=" * 71])
-          DataMigrate::DataMigrator.run(:up, "db/data/", pending_migration[:version])
+          DataMigrateEnd::DataEndMigrator.run(:up, "db/data_end/", pending_migration[:version])
         elsif pending_migration[:kind] == :schema
           ActiveRecord::Migration.write("== %s %s" % ['Schema', "=" * 69])
           ActiveRecord::Migrator.run(:up, "db/migrate/", pending_migration[:version])
@@ -208,7 +209,7 @@ namespace :db do
     task :with_data => :environment do
       assure_data_schema_table
       puts "Current Schema version: #{ActiveRecord::Migrator.current_version}"
-      puts "Current Data version: #{DataMigrate::DataMigrator.current_version}"
+      puts "Current Data version: #{DataMigrateEnd::DataEndMigrator.current_version}"
     end
   end
 end
@@ -218,7 +219,7 @@ namespace :data do
   task :migrate => :environment do
     assure_data_schema_table
     ActiveRecord::Migration.verbose = ENV["VERBOSE"] ? ENV["VERBOSE"] == "true" : true
-    DataMigrate::DataMigrator.migrate("db/data/", ENV["VERSION"] ? ENV["VERSION"].to_i : nil)
+    DataMigrateEnd::DataEndMigrator.migrate("db/data_end/", ENV["VERSION"] ? ENV["VERSION"].to_i : nil)
   end
 
   namespace :migrate do
@@ -239,7 +240,7 @@ namespace :data do
       assure_data_schema_table
       version = ENV["VERSION"] ? ENV["VERSION"].to_i : nil
       raise "VERSION is required" unless version
-      DataMigrate::DataMigrator.run(:up, "db/data/", version)
+      DataMigrateEnd::DataEndMigrator.run(:up, "db/data_end/", version)
     end
 
     desc 'Runs the "down" for a given migration VERSION.'
@@ -247,18 +248,18 @@ namespace :data do
       version = ENV["VERSION"] ? ENV["VERSION"].to_i : nil
       raise "VERSION is required" unless version
       assure_data_schema_table
-      DataMigrate::DataMigrator.run(:down, "db/data/", version)
+      DataMigrateEnd::DataEndMigrator.run(:down, "db/data_end/", version)
     end
 
     desc "Display status of data migrations"
     task :status => :environment do
       config = ActiveRecord::Base.configurations[Rails.env || 'development']
       ActiveRecord::Base.establish_connection(config)
-      unless ActiveRecord::Base.connection.table_exists?(DataMigrate::DataMigrator.schema_migrations_table_name)
+      unless ActiveRecord::Base.connection.table_exists?(DataMigrateEnd::DataEndMigrator.schema_migrations_table_name)
         puts 'Data migrations table does not exist yet.'
         next  # means "return" for rake task
       end
-      db_list = ActiveRecord::Base.connection.select_values("SELECT version FROM #{DataMigrate::DataMigrator.schema_migrations_table_name}")
+      db_list = ActiveRecord::Base.connection.select_values("SELECT version FROM #{DataMigrateEnd::DataEndMigrator.schema_migrations_table_name}")
       file_list = []
       Dir.foreach(File.join(Rails.root, 'db', 'data')) do |file|
         # only files matching "20091231235959_some_name.rb" pattern
@@ -285,7 +286,7 @@ namespace :data do
   task :rollback => :environment do
     assure_data_schema_table
     step = ENV['STEP'] ? ENV['STEP'].to_i : 1
-    DataMigrate::DataMigrator.rollback('db/data/', step)
+    DataMigrateEnd::DataEndMigrator.rollback('db/data_end/', step)
   end
 
   desc 'Pushes the schema to the next version (specify steps w/ STEP=n).'
@@ -293,17 +294,17 @@ namespace :data do
     assure_data_schema_table
     step = ENV['STEP'] ? ENV['STEP'].to_i : 1
     # TODO: No worky for .forward
-    # DataMigrate::DataMigrator.forward('db/data/', step)
+    # DataMigrateEnd::DataEndMigrator.forward('db/data_end/', step)
     migrations = pending_data_migrations.reverse.pop(step).reverse
     migrations.each do | pending_migration |
-      DataMigrate::DataMigrator.run(:up, "db/data/", pending_migration[:version])
+      DataMigrateEnd::DataEndMigrator.run(:up, "db/data_end/", pending_migration[:version])
     end
   end
 
   desc "Retrieves the current schema version number for data migrations"
   task :version => :environment do
     assure_data_schema_table
-    puts "Current data version: #{DataMigrate::DataMigrator.current_version}"
+    puts "Current data version: #{DataMigrateEnd::DataEndMigrator.current_version}"
   end
 end
 
@@ -312,7 +313,7 @@ def pending_migrations
 end
 
 def pending_data_migrations
-  sort_migrations DataMigrate::DataMigrator.new(:up, 'db/data').pending_migrations.map{|m| { :version => m.version, :kind => :data }}
+  sort_migrations DataMigrateEnd::DataEndMigrator.new(:up, 'db/data_end').pending_migrations.map{|m| { :version => m.version, :kind => :data }}
 end
 
 def pending_schema_migrations
@@ -332,7 +333,7 @@ def connect_to_database
   config = ActiveRecord::Base.configurations[Rails.env || 'development']
   ActiveRecord::Base.establish_connection(config)
 
-  unless ActiveRecord::Base.connection.table_exists?(DataMigrate::DataMigrator.schema_migrations_table_name)
+  unless ActiveRecord::Base.connection.table_exists?(DataMigrateEnd::DataEndMigrator.schema_migrations_table_name)
     puts 'Data migrations table does not exist yet.'
     config = nil
   end
@@ -345,7 +346,7 @@ end
 
 def past_migrations sort=nil
   sort = sort.downcase if sort
-  db_list_data = ActiveRecord::Base.connection.select_values("SELECT version FROM #{DataMigrate::DataMigrator.schema_migrations_table_name}").sort
+  db_list_data = ActiveRecord::Base.connection.select_values("SELECT version FROM #{DataMigrateEnd::DataEndMigrator.schema_migrations_table_name}").sort
   db_list_schema = ActiveRecord::Base.connection.select_values("SELECT version FROM #{ActiveRecord::Migrator.schema_migrations_table_name}").sort
   migrations = db_list_data.map{|d| {:version => d.to_i, :kind => :data }} + db_list_schema.map{|d| {:version => d.to_i, :kind => :schema }}
 
@@ -355,7 +356,7 @@ end
 def assure_data_schema_table
   config = ActiveRecord::Base.configurations[Rails.env || 'development'] || ENV["DATABASE_URL"]
   ActiveRecord::Base.establish_connection(config)
-  sm_table = DataMigrate::DataMigrator.schema_migrations_table_name
+  sm_table = DataMigrateEnd::DataEndMigrator.schema_migrations_table_name
 
   unless ActiveRecord::Base.connection.table_exists?(sm_table)
     ActiveRecord::Base.connection.create_table(sm_table, :id => false) do |schema_migrations_table|

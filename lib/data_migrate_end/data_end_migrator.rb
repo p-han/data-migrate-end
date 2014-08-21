@@ -1,7 +1,7 @@
 require 'active_record'
 
-module DataMigrate
-  class DataMigratorEnd < ActiveRecord::Migrator
+module DataMigrateEnd
+  class DataEndMigrator < ActiveRecord::Migrator
     class << self
       def schema_migrations_table_name
         ActiveRecord::Base.table_name_prefix + 'data_end_migrations' + ActiveRecord::Base.table_name_suffix
